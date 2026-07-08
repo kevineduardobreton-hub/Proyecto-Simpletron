@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <cmath>
 
 using namespace std;
 
@@ -12,6 +13,7 @@ const int WRITE = 11;
 const int NEWLINE = 12;        // MEJORA 5: Salida de nueva linea
 const int READ_STRING = 13;    // MEJORA 6: Entrada de cadenas (ASCII)
 const int WRITE_STRING = 14;   // MEJORA 7: Salida de cadenas (ASCII)
+const int READ_FLOAT = 15;     // MEJORA 8: Entrada de punto flotante/fijo escalado
 const int LOAD = 20;
 const int STORE = 21;
 const int ADD = 30;
@@ -27,14 +29,14 @@ const int HALT = 43;
 
 class Simpletron {
 private:
-    int memory[1000]; 
+    int memory[1000]; // MEJORA 2: Memoria de 1000 posiciones
     int accumulator;
     int instructionCounter;
     int instructionRegister;
     int operationCode;
     int operand;
 
-    // Funcion para imprimir el volcado de memoria ajustado
+    // Funcion interna para mostrar el volcado de registros y memoria
     void dump() {
         cout << "\nRegistros:\n";
         cout << left << setw(23) << "acumulador:" << right << showpos << setfill('0') << internal << setw(6) << accumulator << noshowpos << setfill(' ') << endl;
@@ -60,7 +62,6 @@ private:
     }
 
 public:
-    // Constructor para inicializar todo en 0
     Simpletron() {
         for (int i = 0; i < 1000; i++) { 
             memory[i] = 0;
@@ -72,7 +73,7 @@ public:
         operand = 0;
     }
 
-    // Cargar el programa en memoria
+    // MEJORA 1: Carga automatica desde archivo o interactivo con textos de consola restaurados
     void loadProgram() {
         ifstream file("programa.simp");
         
@@ -85,12 +86,10 @@ public:
                 if (instruction == -99999 || instruction == 99999) { 
                     break;
                 }
-                
                 if (instruction < -99999 || instruction > 99999) {
-                    cout << "Error: Instruccion invalida (" << instruction << ") ignorada en el archivo.\n";
+                    cout << "Error: Instruccion invalida (" << instruction << ") ignorada.\n";
                     continue; 
                 }
-
                 memory[index] = instruction;
                 index++;
             }
@@ -117,21 +116,17 @@ public:
                 if (instruction == -99999 || instruction == 99999) { 
                     break;
                 }
-
                 if (instruction < -99999 || instruction > 99999) {
                     cout << "Error: El numero debe estar entre -99999 y +99999. Intente de nuevo.\n";
                     continue; 
                 }
-
                 memory[index] = instruction;
                 index++;
             }
-
             cout << "*** Se termino de cargar el programa ***\n";
         }
     }
 
-    // Ejecutar el programa
     void executeProgram() {
         cout << "*** Comienza la ejecucion del programa ***\n";
         bool isHalted = false;
@@ -139,7 +134,6 @@ public:
 
         while (!isHalted && !isFatalError && instructionCounter < 1000) {
             instructionRegister = memory[instructionCounter];
-            
             operationCode = instructionRegister / 1000;
             operand = instructionRegister % 1000;
 
@@ -150,85 +144,83 @@ public:
                     cout << "? ";
                     cin >> temp;
                     if (temp < -99999 || temp > 99999) { 
-                        cout << "Entrada invalida. Debe estar entre -99999 y +99999.\n";
+                        cout << "Entrada invalida fuera de rango.\n";
                         return; 
                     }
                     memory[operand] = temp;
                     instructionCounter++;
                     break;
 
+                // MEJORA 8: Modificacion en WRITE para soportar la impresion de flotantes
                 case WRITE:
-                    cout << memory[operand] << endl;
+                    if (abs(memory[operand]) > 1000 && (memory[operand] % 10 != 0 || operationCode == READ_FLOAT)) {
+                        cout << fixed << setprecision(3) << (memory[operand] / 1000.0) << endl;
+                    } else {
+                        cout << memory[operand] << endl;
+                    }
                     instructionCounter++;
                     break;
 
-                case NEWLINE:
+                case NEWLINE: // MEJORA 5
                     cout << "\n";
                     instructionCounter++;
                     break;
 
-                case READ_STRING: {
+                case READ_STRING: { // MEJORA 6
                     cout << "string? ";
                     string str;
-                    
                     char ch;
-                    while (cin.peek() == ' ' || cin.peek() == '\t') {
-                        cin.get(ch);
-                    }
-                    if (cin.peek() == '\n') {
-                        cin.get(ch);
-                    }
+                    while (cin.peek() == ' ' || cin.peek() == '\t') cin.get(ch);
+                    if (cin.peek() == '\n') cin.get(ch);
                     
                     getline(cin, str);
-                    
-                    if (str.length() > 99) {
-                        str = str.substr(0, 99);
-                    }
+                    if (str.length() > 99) str = str.substr(0, 99);
                     
                     if (operand + str.length() >= 1000) {
-                        cout << "*** Error Fatal: La longitud de la cadena excede el limite de memoria disponible ***\n";
+                        cout << "*** Error Fatal: Memoria insuficiente para la cadena ***\n";
                         isFatalError = true;
                         break;
                     }
                     
                     memory[operand] = static_cast<int>(str.length()) * 1000;
-                    
                     for (size_t i = 0; i < str.length(); i++) {
-                        int charIndex = static_cast<int>(i + 1);
-                        int asciiVal = static_cast<int>(str[i]);
-                        memory[operand + 1 + i] = (charIndex * 1000) + asciiVal;
+                        memory[operand + 1 + i] = (static_cast<int>(i + 1) * 1000) + static_cast<int>(str[i]);
                     }
-                    
                     instructionCounter++;
                     break;
                 }
 
-                // MEJORA 7: Operacion Salida de Cadenas
-                case WRITE_STRING: {
-                    // Validacion controlada de rango del operando base
+                case WRITE_STRING: { // MEJORA 7
                     if (operand < 0 || operand >= 1000) {
-                        cout << "*** Error: Direccion de memoria base para cadena fuera de rango (" << operand << ") ***\n";
+                        cout << "*** Error: Direccion de cadena invalida ***\n";
                         isFatalError = true;
                         break;
                     }
-
-                    int rawValue = memory[operand];
-                    int length = rawValue / 1000; // Extrae la longitud (dos primeros digitos XX)
-
-                    // Error controlado si los datos de longitud estan corruptos o exceden el mapeo de memoria
+                    int length = memory[operand] / 1000;
                     if (length < 0 || operand + length >= 1000) {
-                        cout << "*** Error Controlado: Estructura de cadena corrupta o excede limites en direccion " << operand << " ***\n";
-                        instructionCounter++; // Continua con la ejecucion para evitar colapso completo catastrophico
+                        cout << "*** Error Controlado: Estructura de cadena corrupta ***\n";
+                        instructionCounter++;
                         break;
                     }
-
-                    // Impresion secuencial traduciendo de ASCII a caracter
                     for (int i = 0; i < length; i++) {
-                        int word = memory[operand + 1 + i];
-                        int asciiVal = word % 1000; // Obtiene el equivalente decimal ASCII (ultimos 3 digitos YYY)
-                        cout << static_cast<char>(asciiVal);
+                        cout << static_cast<char>(memory[operand + 1 + i] % 1000);
                     }
-                    
+                    instructionCounter++;
+                    break;
+                }
+
+                // MEJORA 8: Lectura de numeros con punto flotante (Precision Decimal Controlada)
+                case READ_FLOAT: {
+                    double floatInput;
+                    cout << "float? ";
+                    cin >> floatInput;
+                    temp = static_cast<int>(round(floatInput * 1000.0));
+                    if (temp < -99999 || temp > 99999) {
+                        cout << "*** Error Controlado: Desbordamiento en entrada flotante ***\n";
+                        isFatalError = true;
+                        break;
+                    }
+                    memory[operand] = temp;
                     instructionCounter++;
                     break;
                 }
@@ -243,7 +235,7 @@ public:
                     instructionCounter++;
                     break;
 
-                case ADD:
+                case ADD: 
                     temp = accumulator + memory[operand];
                     if (temp > 99999 || temp < -99999) { 
                         cout << "*** Desbordamiento del acumulador ***\n";
@@ -254,7 +246,7 @@ public:
                     }
                     break;
 
-                case SUBTRACT:
+                case SUBTRACT: 
                     temp = accumulator - memory[operand];
                     if (temp > 99999 || temp < -99999) {
                         cout << "*** Desbordamiento del acumulador ***\n";
@@ -270,13 +262,21 @@ public:
                         cout << "*** Intento de dividir entre cero ***\n";
                         isFatalError = true;
                     } else {
-                        accumulator /= memory[operand];
+                        if (abs(accumulator) < 99999 && abs(memory[operand]) > 10) {
+                            long long scaledDiv = (static_cast<long long>(accumulator) * 1000) / memory[operand];
+                            accumulator = static_cast<int>(scaledDiv);
+                        } else {
+                            accumulator /= memory[operand]; 
+                        }
                         instructionCounter++;
                     }
                     break;
 
                 case MULTIPLY:
-                    temp = accumulator * memory[operand];
+                    temp = (static_cast<long long>(accumulator) * memory[operand]);
+                    if (abs(accumulator) > 1000 || abs(memory[operand]) > 1000) {
+                        temp /= 1000; 
+                    }
                     if (temp > 99999 || temp < -99999) {
                         cout << "*** Desbordamiento del acumulador ***\n";
                         isFatalError = true;
@@ -286,7 +286,7 @@ public:
                     }
                     break;
 
-                case MODULUS:
+                case MODULUS: // MEJORA 3
                     if (memory[operand] == 0) {
                         cout << "*** Intento de dividir entre cero (modulo) ***\n";
                         isFatalError = true;
@@ -296,32 +296,24 @@ public:
                     }
                     break;
 
-                case EXPONENT: {
+                case EXPONENT: { // MEJORA 4
                     int base = accumulator;
                     int exp = memory[operand];
-                    
                     if (exp < 0) {
-                        cout << "*** Error: Exponente negativo no soportado en modo entero ***\n";
+                        cout << "*** Error: Exponente negativo no soportado ***\n";
                         isFatalError = true;
                     } else if (exp == 0) {
                         accumulator = 1;
                         instructionCounter++;
-                    } else if (exp == 1) {
-                        instructionCounter++;
                     } else {
                         long long int result = 1;
                         bool overflow = false;
-                        
                         for (int i = 0; i < exp; i++) {
                             result *= base;
-                            if (result > 99999 || result < -99999) {
-                                overflow = true;
-                                break;
-                            }
+                            if (result > 99999 || result < -99999) { overflow = true; break; }
                         }
-                        
                         if (overflow) {
-                            cout << "*** Desbordamiento del acumulador en exponenciacion ***\n";
+                            cout << "*** Desbordamiento del acumulador ***\n";
                             isFatalError = true;
                         } else {
                             accumulator = static_cast<int>(result);
@@ -331,25 +323,9 @@ public:
                     break;
                 }
 
-                case BRANCH:
-                    instructionCounter = operand;
-                    break;
-
-                case BRANCHNEG:
-                    if (accumulator < 0) {
-                        instructionCounter = operand;
-                    } else {
-                        instructionCounter++;
-                    }
-                    break;
-
-                case BRANCHZERO:
-                    if (accumulator == 0) {
-                        instructionCounter = operand;
-                    } else {
-                        instructionCounter++;
-                    }
-                    break;
+                case BRANCH: instructionCounter = operand; break;
+                case BRANCHNEG: instructionCounter = (accumulator < 0) ? operand : instructionCounter + 1; break;
+                case BRANCHZERO: instructionCounter = (accumulator == 0) ? operand : instructionCounter + 1; break;
 
                 case HALT:
                     cout << "*** Termino la ejecucion de Simpletron ***\n";
@@ -358,7 +334,7 @@ public:
 
                 default:
                     if (operationCode != 0) {
-                        cout << "*** Intento de ejecutar un codigo de operacion invalido ***\n";
+                        cout << "*** Intento de ejecutar un codigo invalido ***\n";
                         isFatalError = true;
                     } else {
                         instructionCounter++; 
@@ -367,10 +343,7 @@ public:
             }
         }
 
-        if (isFatalError) {
-            cout << "*** La ejecucion de Simpletron termino anormalmente ***\n";
-        }
-        
+        if (isFatalError) cout << "*** La ejecucion termino anormalmente ***\n";
         dump();
     }
 };
@@ -379,6 +352,5 @@ int main() {
     Simpletron myComputer;
     myComputer.loadProgram();
     myComputer.executeProgram();
-    
     return 0;
 }
