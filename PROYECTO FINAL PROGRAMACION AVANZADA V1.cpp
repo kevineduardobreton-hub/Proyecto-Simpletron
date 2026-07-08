@@ -2,21 +2,23 @@
 #include <iomanip>
 #include <vector>
 #include <fstream>
+#include <string>
 
 using namespace std;
 
 // Definicion de los codigos de operacion
 const int READ = 10;
 const int WRITE = 11;
-const int NEWLINE = 12;    // MEJORA 5: Salida de nueva linea
+const int NEWLINE = 12;        // MEJORA 5: Salida de nueva linea
+const int READ_STRING = 13;    // MEJORA 6: Entrada de cadenas (ASCII)
 const int LOAD = 20;
 const int STORE = 21;
 const int ADD = 30;
 const int SUBTRACT = 31;
 const int DIVIDE = 32;
 const int MULTIPLY = 33;
-const int MODULUS = 34;    // MEJORA 3: Residuo
-const int EXPONENT = 35;   // MEJORA 4: Exponenciacion
+const int MODULUS = 34;        // MEJORA 3: Residuo
+const int EXPONENT = 35;       // MEJORA 4: Exponenciacion
 const int BRANCH = 40;
 const int BRANCHNEG = 41;
 const int BRANCHZERO = 42;
@@ -159,11 +161,52 @@ public:
                     instructionCounter++;
                     break;
 
-                // MEJORA 5: Operacion Salida de Nueva Linea
                 case NEWLINE:
                     cout << "\n";
                     instructionCounter++;
                     break;
+
+                // MEJORA 6: Operacion Entrada de Cadenas
+                case READ_STRING: {
+                    cout << "string? ";
+                    string str;
+                    
+                    // Limpieza del buffer de entrada para permitir capturar cadenas vacias de forma correcta
+                    char ch;
+                    while (cin.peek() == ' ' || cin.peek() == '\t') {
+                        cin.get(ch);
+                    }
+                    if (cin.peek() == '\n') {
+                        cin.get(ch);
+                    }
+                    
+                    getline(cin, str);
+                    
+                    // Validacion de limite: maximo 99 caracteres para el formato de dos digitos
+                    if (str.length() > 99) {
+                        str = str.substr(0, 99);
+                    }
+                    
+                    // Validacion de limite: verificar espacio suficiente en memoria
+                    if (operand + str.length() >= 1000) {
+                        cout << "*** Error Fatal: La longitud de la cadena excede el limite de memoria disponible ***\n";
+                        isFatalError = true;
+                        break;
+                    }
+                    
+                    // Almacenar la longitud en la palabra base (XX000)
+                    memory[operand] = static_cast<int>(str.length()) * 1000;
+                    
+                    // Almacenar caracteres secuencialmente en las posiciones siguientes (XXYYY)
+                    for (size_t i = 0; i < str.length(); i++) {
+                        int charIndex = static_cast<int>(i + 1); // Posicion basada en 1
+                        int asciiVal = static_cast<int>(str[i]);  // Equivalente ASCII
+                        memory[operand + 1 + i] = (charIndex * 1000) + asciiVal;
+                    }
+                    
+                    instructionCounter++;
+                    break;
+                }
 
                 case LOAD:
                     accumulator = memory[operand];
