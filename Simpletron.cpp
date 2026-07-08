@@ -1,10 +1,11 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <fstream> // Libreria necesaria para leer archivos
 
 using namespace std;
 
-// Definición de los códigos de operación (Lenguaje de Máquina Simpletron - SML)
+// Definicion de los codigos de operacion (Lenguaje de Maquina Simpletron - SML)
 const int READ = 10;
 const int WRITE = 11;
 const int LOAD = 20;
@@ -27,7 +28,7 @@ private:
     int operationCode;
     int operand;
 
-    // Función para imprimir el volcado de memoria (Memory Dump)
+    // Funcion para imprimir el volcado de memoria (Memory Dump)
     void dump() {
         cout << "\nRegistros:\n";
         cout << left << setw(23) << "acumulador:" << right << showpos << setfill('0') << internal << setw(5) << accumulator << noshowpos << setfill(' ') << endl;
@@ -67,37 +68,64 @@ public:
 
     // Fase 1: Cargar el programa en memoria
     void loadProgram() {
-        cout << "*** ¡Bienvenido a Simpletron! ***\n";
-        cout << "*** Introduzca su programa una instruccion ***\n";
-        cout << "*** (o palabra de datos) a la vez en la linea ***\n";
-        cout << "*** de texto de entrada. Yo indicare el numero ***\n";
-        cout << "*** de posicion y una interrogacion (?). Usted ***\n";
-        cout << "*** tecleara entonces la palabra para esa ***\n";
-        cout << "*** posicion. Teclee -9999 para ***\n";
-        cout << "*** dejar de introducir su programa. ***\n\n";
+        // Intentamos abrir un archivo llamado "programa.simp"
+        ifstream file("programa.simp");
+        
+        if (file.is_open()) {
+            cout << "*** Cargando programa desde archivo 'programa.simp' ***\n";
+            int instruction;
+            int index = 0;
+            
+            while (file >> instruction && index < 100) {
+                if (instruction == -9999 || instruction == 9999) {
+                    break;
+                }
+                
+                // Validacion de linea invalida en el archivo
+                if (instruction < -9999 || instruction > 9999) {
+                    cout << "Error: Instruccion invalida (" << instruction << ") ignorada en el archivo.\n";
+                    continue; 
+                }
 
-        int instruction;
-        int index = 0;
+                memory[index] = instruction;
+                index++;
+            }
+            file.close();
+            cout << "*** Se termino de cargar el programa desde el archivo ***\n\n";
+        } else {
+            // Si el archivo no existe, pasamos al modo interactivo original
+            cout << "*** Archivo 'programa.simp' no encontrado. Iniciando modo manual... ***\n";
+            cout << "*** ¡Bienvenido a Simpletron! ***\n";
+            cout << "*** Introduzca su programa una instruccion ***\n";
+            cout << "*** (o palabra de datos) a la vez en la linea ***\n";
+            cout << "*** de texto de entrada. Yo indicare el numero ***\n";
+            cout << "*** de posicion y una interrogacion (?). Usted ***\n";
+            cout << "*** tecleara entonces la palabra para esa ***\n";
+            cout << "*** posicion. Teclee -9999 para ***\n";
+            cout << "*** dejar de introducir su programa. ***\n\n";
 
-        while (index < 100) {
-            cout << setfill('0') << setw(2) << index << " ? ";
-            cin >> instruction;
+            int instruction;
+            int index = 0;
 
-            if (instruction == -9999 || instruction == 9999) { // Aceptamos 9999 o -9999 como centinela
-                break;
+            while (index < 100) {
+                cout << setfill('0') << setw(2) << index << " ? ";
+                cin >> instruction;
+
+                if (instruction == -9999 || instruction == 9999) { 
+                    break;
+                }
+
+                if (instruction < -9999 || instruction > 9999) {
+                    cout << "Error: El numero debe estar entre -9999 y +9999. Intente de nuevo.\n";
+                    continue; 
+                }
+
+                memory[index] = instruction;
+                index++;
             }
 
-            // Validar que el valor esté entre -9999 y +9999
-            if (instruction < -9999 || instruction > 9999) {
-                cout << "Error: El numero debe estar entre -9999 y +9999. Intente de nuevo.\n";
-                continue; // Repite la misma posición
-            }
-
-            memory[index] = instruction;
-            index++;
+            cout << "*** Se termino de cargar el programa ***\n";
         }
-
-        cout << "*** Se termino de cargar el programa ***\n";
     }
 
     // Fase 2: Ejecutar el programa
@@ -107,14 +135,11 @@ public:
         bool isFatalError = false;
 
         while (!isHalted && !isFatalError && instructionCounter < 100) {
-            // Obtener instrucción
             instructionRegister = memory[instructionCounter];
             
-            // Decodificar
             operationCode = instructionRegister / 100;
             operand = instructionRegister % 100;
 
-            // Variables temporales para cálculos y validaciones
             int temp;
 
             switch (operationCode) {
@@ -123,7 +148,7 @@ public:
                     cin >> temp;
                     if (temp < -9999 || temp > 9999) {
                         cout << "Entrada invalida. Debe estar entre -9999 y +9999.\n";
-                        return; // O puedes pedir el número de nuevo, aquí simplemente abortamos
+                        return; 
                     }
                     memory[operand] = temp;
                     instructionCounter++;
@@ -223,7 +248,6 @@ public:
             cout << "*** La ejecucion de Simpletron termino anormalmente ***\n";
         }
         
-        // Al final, ya sea por HALT o por error fatal, imprimimos el volcado de memoria
         dump();
     }
 };
