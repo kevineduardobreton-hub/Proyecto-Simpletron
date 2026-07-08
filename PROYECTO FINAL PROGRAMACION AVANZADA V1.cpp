@@ -11,6 +11,7 @@ const int READ = 10;
 const int WRITE = 11;
 const int NEWLINE = 12;        // MEJORA 5: Salida de nueva linea
 const int READ_STRING = 13;    // MEJORA 6: Entrada de cadenas (ASCII)
+const int WRITE_STRING = 14;   // MEJORA 7: Salida de cadenas (ASCII)
 const int LOAD = 20;
 const int STORE = 21;
 const int ADD = 30;
@@ -166,12 +167,10 @@ public:
                     instructionCounter++;
                     break;
 
-                // MEJORA 6: Operacion Entrada de Cadenas
                 case READ_STRING: {
                     cout << "string? ";
                     string str;
                     
-                    // Limpieza del buffer de entrada para permitir capturar cadenas vacias de forma correcta
                     char ch;
                     while (cin.peek() == ' ' || cin.peek() == '\t') {
                         cin.get(ch);
@@ -182,26 +181,52 @@ public:
                     
                     getline(cin, str);
                     
-                    // Validacion de limite: maximo 99 caracteres para el formato de dos digitos
                     if (str.length() > 99) {
                         str = str.substr(0, 99);
                     }
                     
-                    // Validacion de limite: verificar espacio suficiente en memoria
                     if (operand + str.length() >= 1000) {
                         cout << "*** Error Fatal: La longitud de la cadena excede el limite de memoria disponible ***\n";
                         isFatalError = true;
                         break;
                     }
                     
-                    // Almacenar la longitud en la palabra base (XX000)
                     memory[operand] = static_cast<int>(str.length()) * 1000;
                     
-                    // Almacenar caracteres secuencialmente en las posiciones siguientes (XXYYY)
                     for (size_t i = 0; i < str.length(); i++) {
-                        int charIndex = static_cast<int>(i + 1); // Posicion basada en 1
-                        int asciiVal = static_cast<int>(str[i]);  // Equivalente ASCII
+                        int charIndex = static_cast<int>(i + 1);
+                        int asciiVal = static_cast<int>(str[i]);
                         memory[operand + 1 + i] = (charIndex * 1000) + asciiVal;
+                    }
+                    
+                    instructionCounter++;
+                    break;
+                }
+
+                // MEJORA 7: Operacion Salida de Cadenas
+                case WRITE_STRING: {
+                    // Validacion controlada de rango del operando base
+                    if (operand < 0 || operand >= 1000) {
+                        cout << "*** Error: Direccion de memoria base para cadena fuera de rango (" << operand << ") ***\n";
+                        isFatalError = true;
+                        break;
+                    }
+
+                    int rawValue = memory[operand];
+                    int length = rawValue / 1000; // Extrae la longitud (dos primeros digitos XX)
+
+                    // Error controlado si los datos de longitud estan corruptos o exceden el mapeo de memoria
+                    if (length < 0 || operand + length >= 1000) {
+                        cout << "*** Error Controlado: Estructura de cadena corrupta o excede limites en direccion " << operand << " ***\n";
+                        instructionCounter++; // Continua con la ejecucion para evitar colapso completo catastrophico
+                        break;
+                    }
+
+                    // Impresion secuencial traduciendo de ASCII a caracter
+                    for (int i = 0; i < length; i++) {
+                        int word = memory[operand + 1 + i];
+                        int asciiVal = word % 1000; // Obtiene el equivalente decimal ASCII (ultimos 3 digitos YYY)
+                        cout << static_cast<char>(asciiVal);
                     }
                     
                     instructionCounter++;
