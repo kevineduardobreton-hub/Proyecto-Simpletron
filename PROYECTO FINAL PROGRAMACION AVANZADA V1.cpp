@@ -14,6 +14,7 @@ const int ADD = 30;
 const int SUBTRACT = 31;
 const int DIVIDE = 32;
 const int MULTIPLY = 33;
+const int MODULUS = 34;  // MEJORA 3: Operacion Residuo (modulo)
 const int BRANCH = 40;
 const int BRANCHNEG = 41;
 const int BRANCHZERO = 42;
@@ -21,14 +22,14 @@ const int HALT = 43;
 
 class Simpletron {
 private:
-    int memory[1000]; // Memoria ampliada a 1000 posiciones
+    int memory[1000]; 
     int accumulator;
     int instructionCounter;
     int instructionRegister;
     int operationCode;
     int operand;
 
-    // Funcion para imprimir el volcado de memoria ajustado para 5 digitos
+    // Funcion para imprimir el volcado de memoria ajustado
     void dump() {
         cout << "\nRegistros:\n";
         cout << left << setw(23) << "acumulador:" << right << showpos << setfill('0') << internal << setw(6) << accumulator << noshowpos << setfill(' ') << endl;
@@ -44,7 +45,7 @@ private:
         }
         cout << endl;
 
-        for (int i = 0; i < 1000; i += 10) { // Ciclo ajustado a 1000
+        for (int i = 0; i < 1000; i += 10) { 
             cout << setfill('0') << setw(3) << i << " " << setfill(' ');
             for (int j = 0; j < 10; j++) {
                 cout << showpos << setfill('0') << internal << setw(6) << memory[i + j] << " " << noshowpos << setfill(' ');
@@ -56,7 +57,7 @@ private:
 public:
     // Constructor para inicializar todo en 0
     Simpletron() {
-        for (int i = 0; i < 1000; i++) { // Inicializar 1000 posiciones
+        for (int i = 0; i < 1000; i++) { 
             memory[i] = 0;
         }
         accumulator = 0;
@@ -75,12 +76,11 @@ public:
             int instruction;
             int index = 0;
             
-            while (file >> instruction && index < 1000) { // Limite ajustado a 1000
-                if (instruction == -99999 || instruction == 99999) { // Centinela de 5 digitos
+            while (file >> instruction && index < 1000) { 
+                if (instruction == -99999 || instruction == 99999) { 
                     break;
                 }
                 
-                // Validacion para el nuevo rango de 5 digitos
                 if (instruction < -99999 || instruction > 99999) {
                     cout << "Error: Instruccion invalida (" << instruction << ") ignorada en el archivo.\n";
                     continue; 
@@ -105,11 +105,11 @@ public:
             int instruction;
             int index = 0;
 
-            while (index < 1000) { // Limite ajustado a 1000
-                cout << setfill('0') << setw(3) << index << " ? "; // Mostrar indices de 3 digitos (ej. 000, 099)
+            while (index < 1000) { 
+                cout << setfill('0') << setw(3) << index << " ? "; 
                 cin >> instruction;
 
-                if (instruction == -99999 || instruction == 99999) { // Centinela de 5 digitos
+                if (instruction == -99999 || instruction == 99999) { 
                     break;
                 }
 
@@ -135,18 +135,16 @@ public:
         while (!isHalted && !isFatalError && instructionCounter < 1000) {
             instructionRegister = memory[instructionCounter];
             
-            // Ajuste crucial: Ahora dividimos y sacamos modulo entre 1000 
-            // porque el operando ocupa 3 digitos.
             operationCode = instructionRegister / 1000;
             operand = instructionRegister % 1000;
 
-            int temp;
+            long long int temp;
 
             switch (operationCode) {
                 case READ:
                     cout << "? ";
                     cin >> temp;
-                    if (temp < -99999 || temp > 99999) { // Rango ampliado
+                    if (temp < -99999 || temp > 99999) { 
                         cout << "Entrada invalida. Debe estar entre -99999 y +99999.\n";
                         return; 
                     }
@@ -171,7 +169,7 @@ public:
 
                 case ADD:
                     temp = accumulator + memory[operand];
-                    if (temp > 99999 || temp < -99999) { // Validacion con 5 digitos
+                    if (temp > 99999 || temp < -99999) { 
                         cout << "*** Desbordamiento del acumulador ***\n";
                         isFatalError = true;
                     } else {
@@ -212,6 +210,17 @@ public:
                     }
                     break;
 
+                // MEJORA 3: Operacion Residuo (modulo)
+                case MODULUS:
+                    if (memory[operand] == 0) {
+                        cout << "*** Intento de dividir entre cero (modulo) ***\n";
+                        isFatalError = true;
+                    } else {
+                        accumulator %= memory[operand];
+                        instructionCounter++;
+                    }
+                    break;
+
                 case BRANCH:
                     instructionCounter = operand;
                     break;
@@ -238,8 +247,12 @@ public:
                     break;
 
                 default:
-                    cout << "*** Intento de ejecutar un codigo de operacion invalido ***\n";
-                    isFatalError = true;
+                    if (operationCode != 0) {
+                        cout << "*** Intento de ejecutar un codigo de operacion invalido ***\n";
+                        isFatalError = true;
+                    } else {
+                        instructionCounter++; 
+                    }
                     break;
             }
         }
