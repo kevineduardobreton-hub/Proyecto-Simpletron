@@ -8,6 +8,7 @@ using namespace std;
 // Definicion de los codigos de operacion
 const int READ = 10;
 const int WRITE = 11;
+const int NEWLINE = 12;    // MEJORA 5: Salida de nueva linea
 const int LOAD = 20;
 const int STORE = 21;
 const int ADD = 30;
@@ -158,6 +159,12 @@ public:
                     instructionCounter++;
                     break;
 
+                // MEJORA 5: Operacion Salida de Nueva Linea
+                case NEWLINE:
+                    cout << "\n";
+                    instructionCounter++;
+                    break;
+
                 case LOAD:
                     accumulator = memory[operand];
                     instructionCounter++;
@@ -221,21 +228,17 @@ public:
                     }
                     break;
 
-                // MEJORA 4: Operacion Exponenciacion (Multiplicacion repetida)
                 case EXPONENT: {
                     int base = accumulator;
                     int exp = memory[operand];
                     
                     if (exp < 0) {
-                        // Limitacion documentada controlada (Prueba de limite)
                         cout << "*** Error: Exponente negativo no soportado en modo entero ***\n";
                         isFatalError = true;
                     } else if (exp == 0) {
-                        // Caso especial: exponente 0
                         accumulator = 1;
                         instructionCounter++;
                     } else if (exp == 1) {
-                        // Caso especial: exponente 1
                         instructionCounter++;
                     } else {
                         long long int result = 1;
@@ -250,7 +253,6 @@ public:
                         }
                         
                         if (overflow) {
-                            // Caso controlado de desbordamiento (Overflow)
                             cout << "*** Desbordamiento del acumulador en exponenciacion ***\n";
                             isFatalError = true;
                         } else {
