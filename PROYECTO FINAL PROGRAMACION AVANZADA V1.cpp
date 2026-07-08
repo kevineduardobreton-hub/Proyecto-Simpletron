@@ -14,7 +14,8 @@ const int ADD = 30;
 const int SUBTRACT = 31;
 const int DIVIDE = 32;
 const int MULTIPLY = 33;
-const int MODULUS = 34;  // MEJORA 3: Operacion Residuo (modulo)
+const int MODULUS = 34;    // MEJORA 3: Residuo
+const int EXPONENT = 35;   // MEJORA 4: Exponenciacion
 const int BRANCH = 40;
 const int BRANCHNEG = 41;
 const int BRANCHZERO = 42;
@@ -210,7 +211,6 @@ public:
                     }
                     break;
 
-                // MEJORA 3: Operacion Residuo (modulo)
                 case MODULUS:
                     if (memory[operand] == 0) {
                         cout << "*** Intento de dividir entre cero (modulo) ***\n";
@@ -220,6 +220,46 @@ public:
                         instructionCounter++;
                     }
                     break;
+
+                // MEJORA 4: Operacion Exponenciacion (Multiplicacion repetida)
+                case EXPONENT: {
+                    int base = accumulator;
+                    int exp = memory[operand];
+                    
+                    if (exp < 0) {
+                        // Limitacion documentada controlada (Prueba de limite)
+                        cout << "*** Error: Exponente negativo no soportado en modo entero ***\n";
+                        isFatalError = true;
+                    } else if (exp == 0) {
+                        // Caso especial: exponente 0
+                        accumulator = 1;
+                        instructionCounter++;
+                    } else if (exp == 1) {
+                        // Caso especial: exponente 1
+                        instructionCounter++;
+                    } else {
+                        long long int result = 1;
+                        bool overflow = false;
+                        
+                        for (int i = 0; i < exp; i++) {
+                            result *= base;
+                            if (result > 99999 || result < -99999) {
+                                overflow = true;
+                                break;
+                            }
+                        }
+                        
+                        if (overflow) {
+                            // Caso controlado de desbordamiento (Overflow)
+                            cout << "*** Desbordamiento del acumulador en exponenciacion ***\n";
+                            isFatalError = true;
+                        } else {
+                            accumulator = static_cast<int>(result);
+                            instructionCounter++;
+                        }
+                    }
+                    break;
+                }
 
                 case BRANCH:
                     instructionCounter = operand;
