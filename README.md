@@ -6,7 +6,7 @@ Esta es la **Entrega Final** y el proyecto integrador del curso. Este espacio es
 
 ---
 
-## Proyectos Incluidos
+##  Proyectos Incluidos
 
 Actualmente, el repositorio cuenta con los siguientes programas funcionales, los cuales forman parte de la evaluación final:
 
@@ -27,9 +27,33 @@ Un validador algorítmico que utiliza **Pilas (Stacks)** para verificar la corre
 
 ---
 
-##  Tecnologías Utilizadas
+## Tecnologías Utilizadas
 
 * **Lenguaje:** C++
 * **Estructuras de Datos:** Pilas de la biblioteca estándar (`std::stack`), Vectores (`std::vector`).
 * **Librerías Clave:** `<iostream>`, `<fstream>`, `<string.h>`, `<stdlib.h>`.
 * **Control de Versiones:** Git y GitHub.
+
+---
+
+## Instrucciones de Compilación y Ejecución
+
+Para probar el ciclo completo de este proyecto, se requiere ejecutar los programas en el siguiente orden:
+
+**Paso 1: El Compilador**
+1. Compila el archivo `Compilador.cpp` usando tu compilador C++ de preferencia (ej. `g++ Compilador.cpp -o compilador`).
+2. Asegúrate de tener un archivo de texto con código en lenguaje Simple (ej. `programa1.simple`) en la misma carpeta.
+3. Ejecuta el compilador (`./compilador`). Esto leerá el código fuente y generará automáticamente un archivo con instrucciones en lenguaje máquina llamado `programa1.sml`.
+
+**Paso 2: La Máquina Virtual (Simpletron)**
+1. Compila el archivo `Programa de simpletron.cpp` (ej. `g++ "Programa de simpletron.cpp" -o simpletron`).
+2. Ejecuta el simulador (`./simpletron`). 
+3. El simulador está configurado para leer directamente el archivo `programa1.sml` generado en el paso anterior, ejecutar las operaciones (entradas, matemáticas, salidas) y finalmente mostrar el Volcado de Memoria (Memory Dump) en consola indicando el estado final de los registros y arreglos.
+
+---
+
+##  Pruebas y Ejemplos
+
+En este repositorio se incluyen archivos de prueba para validar el funcionamiento de los programas:
+* `programa1.simple`: Código fuente original escrito en lenguaje Simple con instrucciones, variables condicionales y ciclos.
+* `programa1.sml`: El código máquina puro generado por el compilador, listo para ser procesado por la Simpletron.
